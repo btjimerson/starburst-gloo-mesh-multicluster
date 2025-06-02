@@ -1,0 +1,26 @@
+== Deploy Sample Applications
+
+=== Bookinfo
+
+Install the bookinfo application in both clusters:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl --context $context create namespace bookinfo
+  kubectl --context $context apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo.yaml
+  kubectl --context $context apply -n bookinfo -f https://raw.githubusercontent.com/istio/istio/release-1.24/samples/bookinfo/platform/kube/bookinfo-versions.yaml
+  kubectl set env -n bookinfo --context $context deployments/reviews-v1 CLUSTER_NAME=$context
+  kubectl set env -n bookinfo --context $context deployments/reviews-v2 CLUSTER_NAME=$context
+  kubectl set env -n bookinfo --context $context deployments/reviews-v3 CLUSTER_NAME=$context
+done
+----
+
+=== Command Runner
+
+Install the command runner application in cluster 1. This will allow you to easily execute Bash commands in a web browser:
+
+[,bash]
+----
+kubectl apply --context $CLUSTER1 -f https://raw.githubusercontent.com/btjimerson/command-runner/refs/heads/main/kubernetes/command-runner.yaml
+----

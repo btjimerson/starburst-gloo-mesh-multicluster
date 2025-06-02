@@ -1,0 +1,132 @@
+=== Multi-cluster Services
+
+Deploy east-west gateways in both clusters:
+
+[,bash]
+----
+kubectl apply --context $CLUSTER1 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  labels:
+    istio.io/expose-istiod: "15012"
+    topology.istio.io/network: $CLUSTER1_NAME
+  name: istio-eastwest
+  namespace: istio-gateways
+spec:
+  gatewayClassName: istio-eastwest
+  listeners:
+  - name: cross-network
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Passthrough
+  - name: xds-tls
+    port: 15012
+    protocol: TLS
+    tls:
+      mode: Passthrough
+EOF
+
+kubectl apply --context $CLUSTER2 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  labels:
+    istio.io/expose-istiod: "15012"
+    topology.istio.io/network: $CLUSTER2_NAME
+  name: istio-eastwest
+  namespace: istio-gateways
+spec:
+  gatewayClassName: istio-eastwest
+  listeners:
+  - name: cross-network
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Passthrough
+  - name: xds-tls
+    port: 15012
+    protocol: TLS
+    tls:
+      mode: Passthrough
+EOF
+----
+
+Wait for the east-west gateways to become available:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl wait gateway/istio-eastwest --for=condition=Programmed --context $context -n istio-gateways
+done
+----
+
+Get the addresses of the 2 clusters`' east-west gateways and link them with Gateways
+
+[,bash]
+----
+export CLUSTER1_EW_ADDRESS=$(kubectl get svc -n istio-gateways istio-eastwest --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+export CLUSTER2_EW_ADDRESS=$(kubectl get svc -n istio-gateways istio-eastwest --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+
+echo "Cluster 1 east-west gateway: $CLUSTER1_EW_ADDRESS"
+echo "Cluster 2 east-west gateway: $CLUSTER2_EW_ADDRESS"
+
+kubectl apply --context $CLUSTER1 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  annotations:
+    gateway.istio.io/service-account: istio-eastwest
+    gateway.istio.io/trust-domain: $CLUSTER2_NAME
+  labels:
+    topology.istio.io/network: $CLUSTER2_NAME
+  name: istio-remote-peer-$CLUSTER2_NAME
+  namespace: istio-gateways
+spec:
+  addresses:
+  - type: IPAddress
+    value: $CLUSTER2_EW_ADDRESS
+  gatewayClassName: istio-remote
+  listeners:
+  - name: cross-network
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Passthrough
+  - name: xds-tls
+    port: 15012
+    protocol: TLS
+    tls:
+      mode: Passthrough
+EOF
+
+kubectl apply --context $CLUSTER2 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  annotations:
+    gateway.istio.io/service-account: istio-eastwest
+    gateway.istio.io/trust-domain: $CLUSTER1_NAME
+  labels:
+    topology.istio.io/network: $CLUSTER1_NAME
+  name: istio-remote-peer-$CLUSTER1_NAME
+  namespace: istio-gateways
+spec:
+  addresses:
+  - type: IPAddress
+    value: $CLUSTER1_EW_ADDRESS
+  gatewayClassName: istio-remote
+  listeners:
+  - name: cross-network
+    port: 15008
+    protocol: HBONE
+    tls:
+      mode: Passthrough
+  - name: xds-tls
+    port: 15012
+    protocol: TLS
+    tls:
+      mode: Passthrough
+EOF
+----
