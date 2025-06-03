@@ -20,6 +20,7 @@ jobs:
         # Create a directory for your output, e.g., '_site' or 'public'
         run: |
           mkdir _site
+          cp -r images _site
           asciidoctor -o _site/index.html index.adoc # Adjust to your main .adoc file and desired output
       - name: Upload Pages Artifact
         # This step is CRUCIAL for the "github-pages" artifact
