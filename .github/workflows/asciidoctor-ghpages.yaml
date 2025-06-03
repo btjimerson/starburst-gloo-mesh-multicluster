@@ -14,18 +14,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Build AsciiDoc and Publish to GitHub Pages
-        uses: manoelcampos/asciidoctor-ghpages-action@v2
+      - name: Install Asciidoctor
+        run: sudo apt-get update && sudo apt-get install -y asciidoctor
+      - name: Convert AsciiDoc to HTML
+        # Create a directory for your output, e.g., '_site' or 'public'
+        run: |
+          mkdir _site
+          asciidoctor -o _site/index.html index.adoc # Adjust to your main .adoc file and desired output
+      - name: Upload Pages Artifact
+        # This step is CRUCIAL for the "github-pages" artifact
+        uses: actions/upload-pages-artifact@v3 # Use v3 or later
         with:
-          # Define the source directory where your AsciiDoc files are located.
-          # Default is '.' (repository root).
-          source_dir: '.'
-          # Optional: Pass extra parameters to asciidoctor.
-          # For example, to hide the footer:
-          asciidoctor_params: '--attribute=nofooter'
-          # Optional: If your main AsciiDoc file for the index is not README.adoc
-          # For example, if it's 'my-page.adoc':
-          main_adoc_file: 'index' # Don't include the extension
+          path: '_site' # This should be the directory containing your generated HTML files
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
