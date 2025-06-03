@@ -1,0 +1,30 @@
+name: Publish AsciiDoc to GitHub Pages
+on:
+  push:
+    branches:
+      - main # Or your default branch like 'master'
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Build AsciiDoc and Publish to GitHub Pages
+        uses: manoelcampos/asciidoctor-ghpages-action@v2
+        with:
+          # Define the source directory where your AsciiDoc files are located.
+          # Default is '.' (repository root).
+          source_dir: '.'
+          # Optional: Pass extra parameters to asciidoctor.
+          # For example, to hide the footer:
+          asciidoctor_params: '--attribute=nofooter'
+          # Optional: If your main AsciiDoc file for the index is not README.adoc
+          # For example, if it's 'my-page.adoc':
+          main_adoc_file: 'index' # Don't include the extension
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

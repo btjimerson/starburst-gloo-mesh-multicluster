@@ -227,8 +227,7 @@ spec:
     # Reference the global destination address,
     # not the local service
     backendRefs:
-    - group: networking.istio.io
-      name: productpage.bookinfo.svc
+    - name: productpage.bookinfo.svc
       port: 9080
 EOF
 ----
