@@ -130,3 +130,26 @@ spec:
       mode: Passthrough
 EOF
 ----
+
+Label the product page to enable multi-cluster routing:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl --context $context -n bookinfo label service productpage solo.io/service-scope=global --overwrite
+  kubectl --context $context -n bookinfo annotate service productpage networking.istio.io/traffic-distribution=Any --overwrite
+done
+----
+
+Get the service entry and workload entry created for the global product page:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  echo "Service entries and workload entries for cluster $context:"
+  echo ""
+  kubectl get serviceentry --context $context -n istio-system
+  kubectl get workloadentry --context $context -n istio-system
+  echo ""
+done
+----

@@ -1,0 +1,95 @@
+=== Namespace Isolation
+
+Apply an authorization policy that isolates traffic to the bookinfo namespace:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: security.istio.io/v1beta1
+kind: AuthorizationPolicy
+metadata:
+  name: namespace-isolation
+  namespace: bookinfo
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        namespaces: ["bookinfo"]
+  targetRefs:
+  - kind: Gateway
+    group: gateway.networking.k8s.io
+    name: waypoint
+EOF
+done
+----
+
+Open the command runner application and try to curl the reviews API. You should get a 'RBAC: access denied' response:
+
+[,bash]
+----
+curl -ivk http://reviews.bookinfo:9080/reviews/1
+----
+
+Remove the authorization policy:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl delete authorizationpolicy namespace-isolation --context $context -n bookinfo
+done
+----
+
+Try to curl the reviews API again:
+
+[,bash]
+----
+curl -ivk http://reviews.bookinfo:9080/reviews/1
+----
+
+Apply an authorization policy that allows L7 GET traffic to the reviews service from the product page principal (SPIFFE ID):
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: security.istio.io/v1
+kind: AuthorizationPolicy
+metadata:
+  name: reviews-policy
+  namespace: bookinfo
+spec:
+  action: ALLOW
+  rules:
+  - from:
+    - source:
+        principals: ["cluster1/ns/bookinfo/sa/bookinfo-productpage", "cluster2/ns/bookinfo/sa/bookinfo-productpage", "cluster1/ns/bookinfo/sa/bookinfo-reviews", "cluster2/ns/bookinfo/sa/bookinfo-reviews"]
+    to:
+    - operation:
+        methods: ["GET"]
+  targetRefs:
+  - kind: Gateway
+    group: gateway.networking.k8s.io
+    name: waypoint
+EOF
+done
+----
+
+Open the command runner application and try to curl the reviews API:
+
+[,bash]
+----
+curl -ivk http://reviews.bookinfo:9080/reviews/1
+----
+
+You should get a 'RBAC: access denied' response. Now refresh the product page and ensure you can still access the reviews service.
+
+Clean up the authorization policy:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl delete authorizationpolicy --context $context -n bookinfo reviews-policy
+done
+----

@@ -1,0 +1,105 @@
+=== Request Timeouts
+
+Route traffic to v2 of reviews (which calls the ratings service):
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - group: ""
+    kind: Service
+    name: reviews
+    port: 9080
+  rules:
+  - backendRefs:
+    - name: reviews-v2
+      port: 9080
+EOF
+done
+----
+
+Add a 2 second delay to the ratings service:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: ratings
+  namespace: bookinfo
+spec:
+  hosts:
+  - ratings
+  http:
+  - fault:
+      delay:
+        fixedDelay: 2s
+        percentage:
+          value: 100.0
+    route:
+    - destination:
+        host: ratings
+EOF
+done
+----
+
+Open the product page and notice the 2 second delay:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS/productpage)
+----
+
+Update the reviews route to use a 0.5 second timeout:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - group: ""
+    kind: Service
+    name: reviews
+    port: 9080
+  rules:
+  - backendRefs:
+    - name: reviews-v2
+      port: 9080
+    # Add a 0.5 second timeout
+    timeouts:
+      request: 500ms
+EOF
+done
+----
+
+Open the product page again. The reviews should be unavailable because the timeout is less than the delay:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS/productpage)
+----
+
+Clean up the virtual services and routes:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl delete httproute reviews --context $context -n bookinfo
+  kubectl delete virtualservice ratings --context $context -n bookinfo
+done
+----

@@ -1,0 +1,41 @@
+== Workload identities
+
+Enable access logging for the bookinfo namespace using a Telemetry object:
+
+[,bash]
+----
+kubectl apply -f- <<EOF
+apiVersion: telemetry.istio.io/v1
+kind: Telemetry
+metadata:
+  name: access-logging
+  namespace: bookinfo
+spec:
+  accessLogging:
+    - providers:
+        - name: envoy
+EOF
+----
+
+Find the ztunnel running on the same node as the product page:
+
+[,bash]
+----
+NODE_NAME=$(kubectl get pod -n bookinfo --context $CLUSTER1 -l app=productpage -o jsonpath="{.items[0].spec.nodeName}")
+ZTUNNEL_POD=$(kubectl get pods -n istio-system --context $CLUSTER1 -l app=ztunnel --field-selector spec.nodeName=$NODE_NAME -o jsonpath="{.items[0].metadata.name}")
+echo $ZTUNNEL_POD
+----
+
+Curl the reviews API from the command runner application:
+
+[,bash]
+----
+curl -ivk http://reviews.bookinfo:9080/reviews/1
+----
+
+View the access logs for ztunnel, and note the workload identities (`src.identity` and `dst.identity`):
+
+[,bash]
+----
+kubectl logs -n istio-system $ZTUNNEL_POD | jq
+----

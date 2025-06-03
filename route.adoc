@@ -1,0 +1,170 @@
+=== HTTP Route Configuration
+
+Create a route for the command runner application:
+
+[,bash]
+----
+kubectl --context $CLUSTER1 apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: command-runner-route
+  namespace: command-runner
+spec:
+  parentRefs:
+  - name: http-gateway
+    namespace: istio-gateways
+    sectionName: http-8080
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: command-runner
+      port: 8080
+EOF
+----
+
+Open the command runner application to make sure the route is working:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS:8080/)
+----
+
+Create a route directly to the product page in cluster 2's ingress
+
+[,bash]
+----
+kubectl --context $CLUSTER2 apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bookinfo-cluster2-route
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - name: http-gateway
+    namespace: istio-gateways
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /productpage
+    - path:
+        type: PathPrefix
+        value: /static
+    - path:
+        type: Exact
+        value: /login
+    - path:
+        type: Exact
+        value: /logout
+    backendRefs:
+    - name: productpage
+      port: 9080
+EOF
+----
+
+Open the page application on the second cluster to make sure the route is working:
+
+[,bash]
+----
+open $(echo http://$GATEWAY2_ADDRESS/productpage)
+----
+
+Create a route to httpbin in cluster 1:
+
+[,bash]
+----
+kubectl --context $CLUSTER1 apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httpbin-route
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: http-gateway
+    namespace: istio-gateways
+    sectionName: http-8000
+  rules:
+  - matches:
+    - path:
+        type: PathPrefix
+        value: /
+    backendRefs:
+    - name: httpbin
+      port: 8000
+EOF
+----
+
+Open httpbin to make sure the route is working:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS:8000/)
+----
+
+Create a route for the global product page destination:
+
+[,bash]
+----
+kubectl --context $CLUSTER1 apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: bookinfo-route
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - name: http-gateway
+    namespace: istio-gateways
+    sectionName: http-80
+  rules:
+  - matches:
+    - path:
+        type: Exact
+        value: /productpage
+    - path:
+        type: PathPrefix
+        value: /static
+    - path:
+        type: Exact
+        value: /login
+    - path:
+        type: Exact
+        value: /logout
+    # Reference the global destination address,
+    # not the local service
+    backendRefs:
+    - kind: Hostname
+      group: networking.istio.io
+      name: productpage.bookinfo.mesh.internal
+      port: 9080
+EOF
+----
+
+Open the product page. Refresh the page and check the cluster name in the reviews to verify that traffic is routed across clusters:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS/productpage)
+----
+
+Scale the product page in cluster 1 to 0 replicas:
+
+[,bash]
+----
+kubectl scale --context $CLUSTER1 -n bookinfo --replicas=0 deployments/productpage-v1
+----
+
+Refresh the product page again. All traffic should be routed to cluster 2 (make note of the cluster name in the reviews).
+
+Scale the product page in cluster 1 back to 1 replica:
+
+[,bash]
+----
+kubectl scale --context $CLUSTER1 -n bookinfo --replicas=1 deployments/productpage-v1
+----

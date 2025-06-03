@@ -1,0 +1,66 @@
+=== Waypoint Configuration
+
+Deploy a waypoint to the `bookinfo` namespace for layer 7 policies:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: bookinfo
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+EOF
+
+kubectl label namespace bookinfo --context $context istio.io/use-waypoint=waypoint
+done
+----
+
+Deploy a waypoint for the command runner namespace:
+
+[,bash]
+----
+kubectl apply --context $CLUSTER1 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: command-runner
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+EOF
+
+kubectl label namespace command-runner --context $CLUSTER1 istio.io/use-waypoint=waypoint
+----
+
+Deploy a waypoint for the httpbin namespace:
+
+[,bash]
+----
+kubectl apply --context $CLUSTER1 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: httpbin
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: mesh
+    port: 15008
+    protocol: HBONE
+EOF
+
+kubectl label namespace httpbin --context $CLUSTER1 istio.io/use-waypoint=waypoint
+----

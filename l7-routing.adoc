@@ -1,0 +1,92 @@
+=== Route to Specific Version
+
+Route all traffic to reviews v1:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - group: ""
+    kind: Service
+    name: reviews
+    port: 9080
+  rules:
+  - backendRefs:
+    - name: reviews-v1
+      port: 9080
+EOF
+done
+----
+
+Show that all traffic is served by v1 of reviews (note the pod name in the reviews; it should be reviews-v1):
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS/productpage)
+----
+
+Clean up the route:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl delete httproute --context $context -n bookinfo reviews
+done
+----
+
+=== Route Based on User
+
+Route traffic based on user:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+kubectl apply --context $context -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: reviews
+  namespace: bookinfo
+spec:
+  parentRefs:
+  - group: ""
+    kind: Service
+    name: reviews
+    port: 9080
+  rules:
+  - matches:
+    - headers:
+      - name: end-user
+        value: jason
+    backendRefs:
+    - name: reviews-v2
+      port: 9080
+  - backendRefs:
+    - name: reviews-v1
+      port: 9080
+EOF
+done
+----
+
+Open the product page and login in with jason / jason. When logged in as jason, reviews-v2 pods should be used. Otherwise reviews-v1 pods should be displayed:
+
+[,bash]
+----
+open $(echo http://$GATEWAY1_ADDRESS/productpage)
+----
+
+Clean up routes:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+  kubectl delete httproute --context $context -n bookinfo reviews
+done
+----

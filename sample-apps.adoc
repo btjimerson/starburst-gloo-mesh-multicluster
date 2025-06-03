@@ -16,6 +16,16 @@ for context in $CLUSTER1 $CLUSTER2; do
 done
 ----
 
+=== HTTPBin
+
+Install the httpbin application in cluster 1:
+
+[,bash]
+----
+kubectl --context $CLUSTER1 create namespace httpbin
+kubectl --context $CLUSTER1 apply -n httpbin -f https://raw.githubusercontent.com/istio/istio/refs/heads/master/samples/httpbin/httpbin.yaml
+----
+
 === Command Runner
 
 Install the command runner application in cluster 1. This will allow you to easily execute Bash commands in a web browser:

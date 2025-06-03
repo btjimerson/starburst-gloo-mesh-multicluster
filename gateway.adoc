@@ -1,0 +1,88 @@
+=== Gateway Configuration
+
+Create a gateway for cluster 1 ingress:
+
+[,bash]
+----
+kubectl --context=$CLUSTER1 apply -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: http-gateway
+  namespace: istio-gateways
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http-80
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: http-8000
+    port: 8000
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+  - name: http-8080
+    port: 8080
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+
+EOF
+----
+
+Wait for the gateway and backing service to become available:
+
+[,bash]
+----
+kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER1 -n istio-gateways
+----
+
+Get the address of the first gateway:
+
+[,bash]
+----
+export GATEWAY1_ADDRESS=$(kubectl get svc -n istio-gateways http-gateway-istio --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+echo "Gateway address: $GATEWAY1_ADDRESS"
+----
+
+Create a gateway for cluster 2 ingress:
+
+[,bash]
+----
+kubectl --context=$CLUSTER2 apply -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: http-gateway
+  namespace: istio-gateways
+spec:
+  gatewayClassName: istio
+  listeners:
+  - name: http
+    port: 80
+    protocol: HTTP
+    allowedRoutes:
+      namespaces:
+        from: All
+EOF
+----
+
+Wait for the gateway and backing service to become available:
+
+[,bash]
+----
+kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER2 -n istio-gateways
+----
+
+Get the address of the second gateway:
+
+[,bash]
+----
+export GATEWAY2_ADDRESS=$(kubectl get svc -n istio-gateways http-gateway-istio --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+echo "Gateway address: $GATEWAY2_ADDRESS"
+----
