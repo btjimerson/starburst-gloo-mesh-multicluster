@@ -1,5 +1,5 @@
 == Gloo Mesh Ambient Multi-cluster
-
+:toc:
 
 image::images/multi-cluster.png[image.png]
 
