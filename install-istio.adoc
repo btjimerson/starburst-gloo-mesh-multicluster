@@ -109,6 +109,7 @@ for context in $CLUSTER1 $CLUSTER2; do
 done
 
 kubectl --context $CLUSTER1 label namespace command-runner istio.io/dataplane-mode=ambient --overwrite
+kubectl --context $CLUSTER1 label namespace httpbin istio.io/dataplane-mode=ambient --overwrite
 ----
 
 Enforce strict mTLS with a peer authentication policy:
