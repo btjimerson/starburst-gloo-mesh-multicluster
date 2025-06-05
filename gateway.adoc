@@ -9,7 +9,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: http-gateway
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   gatewayClassName: istio
   listeners:
@@ -39,14 +39,14 @@ Wait for the gateway and backing service to become available:
 
 [,bash]
 ----
-kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER1 -n istio-gateways
+kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER1 -n $ISTIO_NAMESPACE
 ----
 
 Get the address of the first gateway:
 
 [,bash]
 ----
-export GATEWAY1_ADDRESS=$(kubectl get svc -n istio-gateways http-gateway-istio --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+export GATEWAY1_ADDRESS=$(kubectl get svc -n $ISTIO_NAMESPACE http-gateway-istio --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
 echo "Gateway address: $GATEWAY1_ADDRESS"
 ----
 
@@ -59,7 +59,7 @@ apiVersion: gateway.networking.k8s.io/v1
 kind: Gateway
 metadata:
   name: http-gateway
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   gatewayClassName: istio
   listeners:
@@ -76,13 +76,13 @@ Wait for the gateway and backing service to become available:
 
 [,bash]
 ----
-kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER2 -n istio-gateways
+kubectl wait gateway/http-gateway --for=condition=Programmed --context $CLUSTER2 -n $ISTIO_NAMESPACE
 ----
 
 Get the address of the second gateway:
 
 [,bash]
 ----
-export GATEWAY2_ADDRESS=$(kubectl get svc -n istio-gateways http-gateway-istio --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+export GATEWAY2_ADDRESS=$(kubectl get svc -n $ISTIO_NAMESPACE http-gateway-istio --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
 echo "Gateway address: $GATEWAY2_ADDRESS"
 ----

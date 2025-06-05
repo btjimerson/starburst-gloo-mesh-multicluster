@@ -7,21 +7,11 @@ Install the Kubernetes Gateway CRDs:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl apply --context $context -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
+kubectl apply --context $context -f https://github.com/kubernetes-sigs/gateway-api/releases/download/v1.2.1/standard-install.yaml
 done
 ----
 
 === Installation
-
-Create the Istio namespaces:
-
-[,bash]
-----
-for context in $CLUSTER1 $CLUSTER2; do
-  kubectl --context=$context create ns istio-system || true
-  kubectl --context=$context create ns istio-gateways || true
-done
-----
 
 Install the Root Trust Policy
 
@@ -41,53 +31,97 @@ spec:
 EOF
 ----
 
-Install the Gloo Istio operator:
+Install the base CRDs:
 
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  helm upgrade --install --kube-context $context gloo-operator \
-  oci://us-docker.pkg.dev/solo-public/gloo-operator-helm/gloo-operator \
-  --version 0.2.0-beta.1 \
-  -n gloo-system \
-  --create-namespace \
-  --set manager.env.SOLO_ISTIO_LICENSE_KEY=$GLOO_MESH_LICENSE_KEY
+helm upgrade --install istio-base oci://$ISTIO_HELM_REPO/base \
+--namespace $ISTIO_NAMESPACE \
+--version $ISTIO_IMAGE \
+--create-namespace \
+--kube-context $context \
+-f - <<EOF
+defaultRevision: ""
+profile: ambient
+global:
+  istioNamespace: $ISTIO_NAMESPACE
+EOF
 done
 ----
 
-Wait for the operator to become available:
+Install istiod control plane:
 
 [,bash]
 ----
-for context in $CLUSTER1 $CLUSTER2; do
-  kubectl rollout status --context $context -n gloo-system deployments/gloo-operator
-done
-----
-
-Create service mesh controllers to install Istio on both clusters:
-
-[,bash]
-----
-kubectl --context $CLUSTER1 apply -f- <<EOF
-apiVersion: operator.gloo.solo.io/v1
-kind: ServiceMeshController
-metadata:
-  name: istio
-spec:
-  version: $ISTIO_VERSION
-  cluster: $CLUSTER1_NAME
-  network: $CLUSTER1_NAME
+helm upgrade --install istiod oci://$ISTIO_HELM_REPO/istiod \
+--namespace $ISTIO_NAMESPACE \
+--version $ISTIO_IMAGE \
+--kube-context $CLUSTER1 \
+-f - <<EOF
+global:
+  istioNamespace: $ISTIO_NAMESPACE
+  hub: $ISTIO_REPO
+  proxy:
+    clusterDomain: cluster.local
+  tag: $ISTIO_IMAGE
+  multiCluster:
+    clusterName: cluster1
+  network: cluster1
+istio_cni:
+  namespace: $ISTIO_NAMESPACE
+  enabled: true
+meshConfig:
+  accessLogFile: /dev/stdout
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+      ISTIO_META_DNS_CAPTURE: "true"
+env:
+  PILOT_ENABLE_IP_AUTOALLOCATE: "true"
+  PILOT_ENABLE_K8S_SELECT_WORKLOAD_ENTRIES: "false"
+  PILOT_SKIP_VALIDATE_TRUST_DOMAIN: "true"
+profile: ambient
+platforms:
+  peering:
+    enabled: true
+license:
+  value: $GLOO_MESH_LICENSE_KEY
 EOF
 
-kubectl --context $CLUSTER2 apply -f- <<EOF
-apiVersion: operator.gloo.solo.io/v1
-kind: ServiceMeshController
-metadata:
-  name: istio
-spec:
-  version: $ISTIO_VERSION
-  cluster: $CLUSTER2_NAME
-  network: $CLUSTER2_NAME
+helm upgrade --install istiod oci://$ISTIO_HELM_REPO/istiod \
+--namespace $ISTIO_NAMESPACE \
+--version $ISTIO_IMAGE \
+--kube-context $CLUSTER2 \
+-f - <<EOF
+global:
+  istioNamespace: $ISTIO_NAMESPACE
+  hub: $ISTIO_REPO
+  proxy:
+    clusterDomain: cluster.local
+  tag: $ISTIO_IMAGE
+  multiCluster:
+    clusterName: cluster1
+  network: cluster1
+istio_cni:
+  namespace: $ISTIO_NAMESPACE
+  enabled: true
+meshConfig:
+  accessLogFile: /dev/stdout
+  defaultConfig:
+    proxyMetadata:
+      ISTIO_META_DNS_AUTO_ALLOCATE: "true"
+      ISTIO_META_DNS_CAPTURE: "true"
+env:
+  PILOT_ENABLE_IP_AUTOALLOCATE: "true"
+  PILOT_ENABLE_K8S_SELECT_WORKLOAD_ENTRIES: "false"
+  PILOT_SKIP_VALIDATE_TRUST_DOMAIN: "true"
+profile: ambient
+platforms:
+  peering:
+    enabled: true
+license:
+  value: $GLOO_MESH_LICENSE_KEY
 EOF
 ----
 
@@ -96,7 +130,7 @@ Wait for the Istio control planes to become available:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl rollout status --context $context -n istio-system deployments/istiod-gloo
+kubectl rollout status --context $context -n $ISTIO_NAMESPACE deployments/istiod
 done
 ----
 
@@ -105,7 +139,7 @@ Join workloads to the mesh:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl --context $context label namespace bookinfo istio.io/dataplane-mode=ambient --overwrite
+kubectl --context $context label namespace bookinfo istio.io/dataplane-mode=ambient --overwrite
 done
 
 kubectl --context $CLUSTER1 label namespace command-runner istio.io/dataplane-mode=ambient --overwrite
@@ -122,7 +156,7 @@ apiVersion: security.istio.io/v1
 kind: PeerAuthentication
 metadata:
   name: default
-  namespace: istio-system
+  namespace: $ISTIO_NAMESPACE
 spec:
   mtls:
     mode: STRICT

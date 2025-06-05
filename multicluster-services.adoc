@@ -12,7 +12,7 @@ metadata:
     istio.io/expose-istiod: "15012"
     topology.istio.io/network: $CLUSTER1_NAME
   name: istio-eastwest
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   gatewayClassName: istio-eastwest
   listeners:
@@ -36,7 +36,7 @@ metadata:
     istio.io/expose-istiod: "15012"
     topology.istio.io/network: $CLUSTER2_NAME
   name: istio-eastwest
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   gatewayClassName: istio-eastwest
   listeners:
@@ -58,7 +58,7 @@ Wait for the east-west gateways to become available:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl wait gateway/istio-eastwest --for=condition=Programmed --context $context -n istio-gateways
+kubectl wait gateway/istio-eastwest --for=condition=Programmed --context $context -n $ISTIO_NAMESPACE
 done
 ----
 
@@ -66,8 +66,8 @@ Get the addresses of the 2 clusters`' east-west gateways and link them with Gate
 
 [,bash]
 ----
-export CLUSTER1_EW_ADDRESS=$(kubectl get svc -n istio-gateways istio-eastwest --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
-export CLUSTER2_EW_ADDRESS=$(kubectl get svc -n istio-gateways istio-eastwest --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+export CLUSTER1_EW_ADDRESS=$(kubectl get svc -n $ISTIO_NAMESPACE istio-eastwest --context $CLUSTER1 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
+export CLUSTER2_EW_ADDRESS=$(kubectl get svc -n $ISTIO_NAMESPACE istio-eastwest --context $CLUSTER2 -o jsonpath="{.status.loadBalancer.ingress[0]['hostname','ip']}")
 
 echo "Cluster 1 east-west gateway: $CLUSTER1_EW_ADDRESS"
 echo "Cluster 2 east-west gateway: $CLUSTER2_EW_ADDRESS"
@@ -82,7 +82,7 @@ metadata:
   labels:
     topology.istio.io/network: $CLUSTER2_NAME
   name: istio-remote-peer-$CLUSTER2_NAME
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   addresses:
   - type: IPAddress
@@ -111,7 +111,7 @@ metadata:
   labels:
     topology.istio.io/network: $CLUSTER1_NAME
   name: istio-remote-peer-$CLUSTER1_NAME
-  namespace: istio-gateways
+  namespace: $ISTIO_NAMESPACE
 spec:
   addresses:
   - type: IPAddress
@@ -136,8 +136,8 @@ Label the product page to enable multi-cluster routing:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl --context $context -n bookinfo label service productpage solo.io/service-scope=global --overwrite
-  kubectl --context $context -n bookinfo annotate service productpage networking.istio.io/traffic-distribution=Any --overwrite
+kubectl --context $context -n bookinfo label service productpage solo.io/service-scope=global --overwrite
+kubectl --context $context -n bookinfo annotate service productpage networking.istio.io/traffic-distribution=Any --overwrite
 done
 ----
 
@@ -146,10 +146,10 @@ Get the service entry and workload entry created for the global product page:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  echo "Service entries and workload entries for cluster $context:"
-  echo ""
-  kubectl get serviceentry --context $context -n istio-system
-  kubectl get workloadentry --context $context -n istio-system
-  echo ""
+echo "Service entries and workload entries for cluster $context:"
+echo ""
+kubectl get serviceentry --context $context -n $ISTIO_NAMESPACE
+kubectl get workloadentry --context $context -n $ISTIO_NAMESPACE
+echo ""
 done
 ----

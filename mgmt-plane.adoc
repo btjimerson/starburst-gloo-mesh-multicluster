@@ -1,4 +1,4 @@
-= Install Gloo Management Plane
+== Install Gloo Management Plane
 
 Install the management plane in cluster 1:
 
@@ -6,6 +6,7 @@ Install the management plane in cluster 1:
 ----
 helm upgrade --install gloo-platform-crds gloo-platform/gloo-platform-crds \
   -n gloo-mesh \
+  --create-namespace \
   --kube-context $CLUSTER1 \
   --version=$GLOO_VERSION
 
@@ -87,6 +88,8 @@ Install the Gloo mesh agent in cluster 2:
 
 [,bash]
 ----
+kubectl create namespace --context $CLUSTER2 gloo-mesh
+
 kubectl get secret relay-root-tls-secret -n gloo-mesh --context $CLUSTER1 -o jsonpath='{.data.ca\.crt}' | base64 -d > ca.crt
 kubectl create secret generic relay-root-tls-secret -n gloo-mesh --context $CLUSTER2 --from-file ca.crt=ca.crt
 rm ca.crt

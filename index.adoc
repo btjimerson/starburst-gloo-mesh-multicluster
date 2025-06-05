@@ -27,12 +27,18 @@ Set the following environment variables. CLUSTER1 and CLUSTER2 should be the nam
 
 [,bash]
 ----
-export CLUSTER1=<cluster1-context>
-export CLUSTER2=<cluster2-context>
+export CLUSTER1= # CLuster 1 context
+export CLUSTER2= # Cluster 2 context
+export ISTIO_NAMESPACE=istio-system # Change this if needed
 export CLUSTER1_NAME=cluster1
 export CLUSTER2_NAME=cluster2
 export GLOO_VERSION=2.8.1
 export ISTIO_VERSION=1.25.3
+export REPO_KEY=e038d180f90a
+export ISTIO_IMAGE=$ISTIO_VERSION-solo
+export ISTIO_REPO=us-docker.pkg.dev/gloo-mesh/istio-$REPO_KEY
+export ISTIO_HELM_REPO=us-docker.pkg.dev/gloo-mesh/istio-helm-$REPO_KEY
+
 export GLOO_MESH_LICENSE_KEY=<gloo-mesh-license-key>
 ----
 
@@ -45,7 +51,8 @@ echo "Cluster 1 Name: $CLUSTER1_NAME"
 echo "Cluster 2: $CLUSTER2"
 echo "Cluster 2 Name: $CLUSTER2_NAME"
 echo "Gloo Version: $GLOO_VERSION"
-echo "Istio Version: $ISTIO_VERSION"
+echo "Istio Image: $ISTIO_IMAGE"
+echo "Istio Namespace: $ISTIO_NAMESPACE"
 ----
 
 include::sample-apps.adoc[]

@@ -99,7 +99,7 @@ Clean up the virtual services and routes:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl delete httproute reviews --context $context -n bookinfo
+kubectl delete httproute reviews --context $context -n bookinfo
   kubectl delete virtualservice ratings --context $context -n bookinfo
 done
 ----

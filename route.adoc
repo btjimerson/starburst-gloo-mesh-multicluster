@@ -13,7 +13,7 @@ metadata:
 spec:
   parentRefs:
   - name: http-gateway
-    namespace: istio-gateways
+    namespace: $ISTIO_NAMESPACE
     sectionName: http-8080
   rules:
   - matches:
@@ -46,7 +46,7 @@ metadata:
 spec:
   parentRefs:
   - name: http-gateway
-    namespace: istio-gateways
+    namespace: $ISTIO_NAMESPACE
   rules:
   - matches:
     - path:
@@ -87,7 +87,7 @@ metadata:
 spec:
   parentRefs:
   - name: http-gateway
-    namespace: istio-gateways
+    namespace: $ISTIO_NAMESPACE
     sectionName: http-8000
   rules:
   - matches:
@@ -120,7 +120,7 @@ metadata:
 spec:
   parentRefs:
   - name: http-gateway
-    namespace: istio-gateways
+    namespace: $ISTIO_NAMESPACE
     sectionName: http-80
   rules:
   - matches:
@@ -136,6 +136,9 @@ spec:
     - path:
         type: Exact
         value: /logout
+    - path:
+        type: PathPrefix
+        value: /api/v1/products
     # Reference the global destination address,
     # not the local service
     backendRefs:

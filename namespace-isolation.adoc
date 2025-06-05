@@ -37,7 +37,7 @@ Remove the authorization policy:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl delete authorizationpolicy namespace-isolation --context $context -n bookinfo
+kubectl delete authorizationpolicy namespace-isolation --context $context -n bookinfo
 done
 ----
 
@@ -90,6 +90,6 @@ Clean up the authorization policy:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl delete authorizationpolicy --context $context -n bookinfo reviews-policy
+kubectl delete authorizationpolicy --context $context -n bookinfo reviews-policy
 done
 ----

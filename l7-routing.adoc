@@ -37,7 +37,7 @@ Clean up the route:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl delete httproute --context $context -n bookinfo reviews
+kubectl delete httproute --context $context -n bookinfo reviews
 done
 ----
 
@@ -87,6 +87,6 @@ Clean up routes:
 [,bash]
 ----
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl delete httproute --context $context -n bookinfo reviews
+kubectl delete httproute --context $context -n bookinfo reviews
 done
 ----
