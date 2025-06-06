@@ -41,7 +41,7 @@ helm upgrade --install istio-base oci://$ISTIO_HELM_REPO/base \
 --version $ISTIO_IMAGE \
 --create-namespace \
 --kube-context $context \
--f - <<EOF
+-f- <<EOF
 defaultRevision: ""
 profile: ambient
 global:
@@ -58,7 +58,7 @@ helm upgrade --install istiod oci://$ISTIO_HELM_REPO/istiod \
 --namespace $ISTIO_NAMESPACE \
 --version $ISTIO_IMAGE \
 --kube-context $CLUSTER1 \
--f - <<EOF
+-f- <<EOF
 global:
   istioNamespace: $ISTIO_NAMESPACE
   hub: $ISTIO_REPO
@@ -93,7 +93,7 @@ helm upgrade --install istiod oci://$ISTIO_HELM_REPO/istiod \
 --namespace $ISTIO_NAMESPACE \
 --version $ISTIO_IMAGE \
 --kube-context $CLUSTER2 \
--f - <<EOF
+-f- <<EOF
 global:
   istioNamespace: $ISTIO_NAMESPACE
   hub: $ISTIO_REPO
@@ -132,6 +132,89 @@ Wait for the Istio control planes to become available:
 for context in $CLUSTER1 $CLUSTER2; do
 kubectl rollout status --context $context -n $ISTIO_NAMESPACE deployments/istiod
 done
+----
+
+Install Istio CNI in both clusters:
+
+[,bash]
+----
+for context in $CLUSTER1 $CLUSTER2; do
+helm upgrade --install istio-cni oci://$ISTIO_HELM_REPO/cni \
+--namespace $ISTIO_NAMESPACE \
+--kube-context $context \
+--version $ISTIO_IMAGE \
+--set global.istioNamespace=$ISTIO_NAMESPACE \
+-f- <<EOF
+# Assigns IP addresses to multicluster services
+ambient:
+  dnsCapture: true
+excludeNamespaces:
+  - $ISTIO_NAMESPACE
+  - kube-system
+global:
+  hub: $ISTIO_REPO
+  tag: $ISTIO_IMAGE
+  variant: distroless
+profile: ambient
+EOF
+done
+----
+
+Install ztunnel in both clusters:
+
+[,bash]
+----
+helm upgrade --install ztunnel oci://$ISTIO_HELM_REPO/ztunnel \
+--namespace $ISTIO_NAMESPACE \
+--kube-context $CLUSTER1 \
+--version $ISTIO_IMAGE \
+--set global.istioNamespace=$ISTIO_NAMESPACE \
+-f- <<EOF
+configValidation: true
+enabled: true
+env:
+  L7_ENABLED: "true"
+  # Required when a unique trust domain is set for each cluster
+  SKIP_VALIDATE_TRUST_DOMAIN: "true"
+hub: $ISTIO_REPO
+multiCluster:
+  clusterName: $CLUSTER1_NAME
+tag: $ISTIO_IMAGE
+istioNamespace: $ISTIO_NAMESPACE
+namespace: $ISTIO_NAMESPACE
+network: $CLUSTER1_NAME
+profile: ambient
+proxy:
+  clusterDomain: cluster.local
+terminationGracePeriodSeconds: 30
+variant: distroless
+EOF
+
+helm upgrade --install ztunnel oci://$ISTIO_HELM_REPO/ztunnel \
+--namespace $ISTIO_NAMESPACE \
+--kube-context $CLUSTER2 \
+--version $ISTIO_IMAGE \
+--set global.istioNamespace=$ISTIO_NAMESPACE \
+-f- <<EOF
+configValidation: true
+enabled: true
+env:
+  L7_ENABLED: "true"
+  # Required when a unique trust domain is set for each cluster
+  SKIP_VALIDATE_TRUST_DOMAIN: "true"
+hub: $ISTIO_REPO
+multiCluster:
+  clusterName: $CLUSTER2_NAME
+tag: $ISTIO_IMAGE
+istioNamespace: $ISTIO_NAMESPACE
+namespace: $ISTIO_NAMESPACE
+network: $CLUSTER2_NAME
+profile: ambient
+proxy:
+  clusterDomain: cluster.local
+terminationGracePeriodSeconds: 30
+variant: distroless
+EOF
 ----
 
 Join workloads to the mesh:

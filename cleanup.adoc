@@ -13,8 +13,8 @@ kubectl delete gateway waypoint --context $CLUSTER1 -n command-runner
 # application routes and gateway
 kubectl delete httproute bookinfo-route --context $CLUSTER1 -n bookinfo
 kubectl delete httproute command-runner-route --context $CLUSTER1 -n command-runner
-kubectl delete httproute bookinfo-2-route --context $CLUSTER2 -n bookinfo
-kubectl delete httproute httpbin --context $CLUSTER1 -n httpbin
+kubectl delete httproute bookinfo-cluster2-route --context $CLUSTER2 -n bookinfo
+kubectl delete httproute httpbin-route --context $CLUSTER1 -n httpbin
 kubectl delete gateway http-gateway --context $CLUSTER1 -n $ISTIO_NAMESPACE
 kubectl delete gateway http-gateway --context $CLUSTER2 -n $ISTIO_NAMESPACE
 
@@ -23,23 +23,21 @@ kubectl delete gateway istio-remote-peer-cluster1 --context $CLUSTER2 -n $ISTIO_
 kubectl delete gateway istio-remote-peer-cluster2 --context $CLUSTER1 -n $ISTIO_NAMESPACE
 for context in $CLUSTER1 $CLUSTER2; do
 kubectl --context $context -n bookinfo label service productpage solo.io/service-scope-
-  kubectl --context $context -n bookinfo annotate service productpage networking.istio.io/traffic-distribution-
-  kubectl delete service istio-eastwest --context $context -n $ISTIO_NAMESPACE
-  kubectl delete gateway istio-eastwest --context $context -n $ISTIO_NAMESPACE
-  kubectl delete namespace $ISTIO_NAMESPACE --context $context
+kubectl --context $context -n bookinfo annotate service productpage networking.istio.io/traffic-distribution-
+kubectl delete service istio-eastwest --context $context -n $ISTIO_NAMESPACE
+kubectl delete gateway istio-eastwest --context $context -n $ISTIO_NAMESPACE
+kubectl delete namespace $ISTIO_NAMESPACE --context $context
 done
 
 # istio
 for context in $CLUSTER1 $CLUSTER2; do
 kubectl delete peerauthentication default --context $context -n $ISTIO_NAMESPACE
-  helm uninstall istio-base --kube-context $context -n $ISTIO_NAMESPACE
-  helm uninstall istiod --kube-context $context -n $ISTIO_NAMESPACE
-  kubectl delete namespace gloo-system --context $context
-  kubectl delete secret generic cacerts --context $context -n $ISTIO_NAMESPACE
-  kubectl delete namespace $ISTIO_NAMESPACE --context $context
-  kubectl delete namespace $ISTIO_NAMESPACE --context $context
-  kubectl delete roottrustpolicy --context $context -n gloo-mesh root-trust-policy
-  kubectl get crds --context $context -oname | grep --color=never 'istio.io' | xargs kubectl delete --context $context --ignore-not-found
+helm uninstall istio-base --kube-context $context -n $ISTIO_NAMESPACE
+helm uninstall istiod --kube-context $context -n $ISTIO_NAMESPACE
+kubectl delete secret generic cacerts --context $context -n $ISTIO_NAMESPACE
+kubectl delete namespace $ISTIO_NAMESPACE --context $context
+kubectl delete roottrustpolicy --context $context -n gloo-mesh root-trust-policy
+kubectl get crds --context $context -oname | grep --color=never 'istio.io' | xargs kubectl delete --context $context --ignore-not-found
 done
 
 
@@ -55,7 +53,7 @@ helm uninstall gloo-platform-crds --kube-context $CLUSTER1 -n gloo-mesh
 kubectl delete secret relay-client-tls-secret --context $CLUSTER1 -n gloo-mesh
 kubectl delete namespace gloo-mesh --context $CLUSTER1
 for context in $CLUSTER1 $CLUSTER2; do
-  kubectl get crds --context $context -oname | grep --color=never 'solo.io' | xargs kubectl delete --context $context --ignore-not-found
+kubectl get crds --context $context -oname | grep --color=never 'solo.io' | xargs kubectl delete --context $context --ignore-not-found
 done
 
 # sample apps
