@@ -90,3 +90,153 @@ for context in $CLUSTER1 $CLUSTER2; do
 kubectl delete httproute --context $context -n bookinfo reviews
 done
 ----
+
+=== Add headers
+
+Add a header to requests to httpbin
+
+[,bash]
+----
+kubectl apply --context $context -f- <<EOF
+apiVersion: networking.istio.io/v1
+kind: VirtualService
+metadata:
+  name: httpbin
+  namespace: httpbin
+spec:
+  hosts:
+  - httpbin
+  http:
+  - headers:
+      request:
+        add:
+          brian: rules
+    route:
+    - destination:
+        host: httpbin
+EOF
+----
+
+[,bash]
+----
+kubectl apply -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httpbin
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: httpbin
+    kind: Service
+    group: ""
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+       - name: httpbin
+         port: 8000
+      filters:
+        - type: RequestHeaderModifier
+          requestHeaderModifier:
+            add:
+              - name: blackrock
+                value: rules
+EOF
+----
+
+Cleanup
+
+[,bash]
+----
+kubectl delete httproute -n httpbin httpbin 
+----
+
+=== Rate limiting
+
+Apply rate limiting to httpbin.
+
+Create a rate limit config
+
+[,bash]
+----
+kubectl apply -f - <<EOF
+apiVersion: ratelimit.solo.io/v1alpha1
+kind: RateLimitConfig
+metadata:
+  name: ratelimit-httpbin
+  namespace: httpbin
+spec:
+  raw:
+    descriptors:
+    - key: generic_key
+      value: counter
+      rateLimit:
+        requestsPerUnit: 1
+        unit: MINUTE
+    rateLimits:
+    - actions:
+      - genericKey:
+          descriptorValue: counter
+EOF
+----
+
+Create a route option
+
+[,bash]
+----
+kubectl apply -f - <<EOF
+apiVersion: gateway.solo.io/v1
+kind: RouteOption
+metadata:
+  name: httpbin
+  namespace: httpbin
+spec:
+  targetRefs:
+  - group: gateway.networking.k8s.io
+    kind: HTTPRoute
+    name: httpbin
+  options:
+    rateLimitConfigs:
+      refs:
+      - name: ratelimit-httpbin
+        namespace: httpbin
+EOF
+----
+
+Create an HTTPRoute with the rate limit
+
+[,bash]
+----
+kubectl apply -f - <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: httpbin
+  namespace: httpbin
+spec:
+  parentRefs:
+  - name: httpbin
+    kind: Service
+    group: ""
+  rules:
+    - matches:
+      - path:
+          type: PathPrefix
+          value: /
+      backendRefs:
+       - name: httpbin
+         port: 8000
+EOF
+----
+
+Clean up:
+
+[,bash]
+----
+kubectl delete httproute -n httpbin httpbin
+kubectl delete routeoption -n httpbin httpbin
+kubectl delete ratelimitconfig -n httpbin ratelimit-httpbin
+----

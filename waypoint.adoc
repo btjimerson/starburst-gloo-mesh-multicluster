@@ -55,12 +55,31 @@ metadata:
   name: waypoint
   namespace: httpbin
 spec:
-  gatewayClassName: istio-waypoint
+  gatewayClassName: gloo-waypoint
   listeners:
-  - name: mesh
+  - name: proxy
     port: 15008
-    protocol: HBONE
+    protocol: istio.io/PROXY
 EOF
 
-kubectl label namespace httpbin --context $CLUSTER1 istio.io/use-waypoint=waypoint
+kubectl label namespace httpbin -n httpbin --context $CLUSTER1 istio.io/use-waypoint=gloo-waypoint
+----
+
+[,bash]
+----
+kubectl apply --context $CLUSTER1 -f- <<EOF
+apiVersion: gateway.networking.k8s.io/v1
+kind: Gateway
+metadata:
+  name: waypoint
+  namespace: httpbin
+spec:
+  gatewayClassName: istio-waypoint
+  listeners:
+  - name: proxy
+    port: 15008
+    protocol: istio.io/PROXY
+EOF
+
+kubectl label namespace httpbin -n httpbin --context $CLUSTER1 istio.io/use-waypoint=waypoint
 ----
