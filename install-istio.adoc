@@ -101,8 +101,8 @@ global:
     clusterDomain: cluster.local
   tag: $ISTIO_IMAGE
   multiCluster:
-    clusterName: cluster1
-  network: cluster1
+    clusterName: cluster2
+  network: cluster2
 istio_cni:
   namespace: $ISTIO_NAMESPACE
   enabled: true
