@@ -182,7 +182,6 @@ multiCluster:
 tag: $ISTIO_IMAGE
 istioNamespace: $ISTIO_NAMESPACE
 namespace: $ISTIO_NAMESPACE
-network: $CLUSTER1_NAME
 profile: ambient
 proxy:
   clusterDomain: cluster.local
@@ -208,7 +207,6 @@ multiCluster:
 tag: $ISTIO_IMAGE
 istioNamespace: $ISTIO_NAMESPACE
 namespace: $ISTIO_NAMESPACE
-network: $CLUSTER2_NAME
 profile: ambient
 proxy:
   clusterDomain: cluster.local
